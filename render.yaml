@@ -1,9 +1,11 @@
 services:
-  - type: worker
+  - type: web
     name: mcp-dynamic-html-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python server.py
+    startCommand: python server_http.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: PORT
+        value: 10000
