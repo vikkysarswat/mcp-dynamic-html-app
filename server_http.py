@@ -35,6 +35,10 @@ async def health_check(request):
 async def openapi_spec(request):
     """OpenAPI specification for ChatGPT Actions."""
     host = request.host
+
+    # Always prefer HTTPS even in local setups (ChatGPT Actions reject plain HTTP)
+    base_url = f"https://{host}"
+
     spec = {
         "openapi": "3.1.0",
         "info": {
@@ -44,8 +48,8 @@ async def openapi_spec(request):
         },
         "servers": [
             {
-                "url": f"https://{host}" if "localhost" not in host else f"http://{host}",
-                "description": "Production server"
+                "url": base_url,
+                "description": "Public HTTPS endpoint for ChatGPT Actions"
             }
         ],
         "paths": {
@@ -53,30 +57,19 @@ async def openapi_spec(request):
                 "get": {
                     "operationId": "getDynamicDashboard",
                     "summary": "Get dynamic dashboard with live metrics",
-                    "description": "Fetches live metrics data and renders a dynamic HTML dashboard with real-time stats, activity feed, and alerts",
+                    "description": "Fetches live metrics data and renders a dynamic HTML dashboard.",
                     "parameters": [
                         {
                             "name": "theme",
                             "in": "query",
-                            "description": "Dashboard color theme",
                             "required": False,
-                            "schema": {
-                                "type": "string",
-                                "enum": ["light", "dark"],
-                                "default": "light"
-                            }
+                            "schema": {"type": "string", "enum": ["light", "dark"], "default": "light"}
                         }
                     ],
                     "responses": {
                         "200": {
                             "description": "HTML dashboard rendered successfully",
-                            "content": {
-                                "text/html": {
-                                    "schema": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+                            "content": {"text/html": {"schema": {"type": "string"}}}
                         }
                     }
                 }
@@ -85,33 +78,20 @@ async def openapi_spec(request):
                 "get": {
                     "operationId": "getUserProfile",
                     "summary": "Get user profile card",
-                    "description": "Fetches user data and renders a dynamic user profile card with avatar, role, and details. Valid user IDs: user_001, user_002, user_003",
                     "parameters": [
                         {
                             "name": "user_id",
                             "in": "path",
-                            "description": "User ID (user_001, user_002, or user_003)",
                             "required": True,
-                            "schema": {
-                                "type": "string",
-                                "enum": ["user_001", "user_002", "user_003"]
-                            }
+                            "schema": {"type": "string"}
                         }
                     ],
                     "responses": {
                         "200": {
                             "description": "User profile HTML rendered successfully",
-                            "content": {
-                                "text/html": {
-                                    "schema": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+                            "content": {"text/html": {"schema": {"type": "string"}}}
                         },
-                        "404": {
-                            "description": "User not found"
-                        }
+                        "404": {"description": "User not found"}
                     }
                 }
             },
@@ -119,12 +99,10 @@ async def openapi_spec(request):
                 "get": {
                     "operationId": "getMetricsTable",
                     "summary": "Get interactive metrics table",
-                    "description": "Fetches metrics data and renders an interactive HTML table. Choose from sales, performance, or engagement metrics",
                     "parameters": [
                         {
                             "name": "type",
                             "in": "query",
-                            "description": "Type of metrics to display",
                             "required": False,
                             "schema": {
                                 "type": "string",
@@ -135,34 +113,27 @@ async def openapi_spec(request):
                         {
                             "name": "limit",
                             "in": "query",
-                            "description": "Number of rows to return (1-30)",
                             "required": False,
-                            "schema": {
-                                "type": "integer",
-                                "minimum": 1,
-                                "maximum": 30,
-                                "default": 10
-                            }
+                            "schema": {"type": "integer", "minimum": 1, "maximum": 30, "default": 10}
                         }
                     ],
                     "responses": {
                         "200": {
                             "description": "Metrics table HTML rendered successfully",
-                            "content": {
-                                "text/html": {
-                                    "schema": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
+                            "content": {"text/html": {"schema": {"type": "string"}}}
                         }
                     }
                 }
             }
         }
     }
-    
-    return web.json_response(spec)
+
+    # ✅ Explicitly return with application/json to avoid MCP parsing issues
+    return web.Response(
+        text=json.dumps(spec, indent=2),
+        content_type='application/json'
+    )
+
 
 
 async def get_dashboard(request):
