@@ -11,7 +11,7 @@ This server demonstrates how to create a ChatGPT app that:
 import asyncio
 import json
 from datetime import datetime
-from typing import Any
+from typing import Any, Union
 import logging
 
 from mcp.server.models import InitializationOptions
@@ -44,10 +44,10 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "Dashboard theme (light or dark)",
                         "enum": ["light", "dark"],
-                        "default": "light"
+                        "default": "light",
                     }
                 },
-                "required": []
+                "required": [],
             },
         ),
         types.Tool(
@@ -58,10 +58,10 @@ async def handle_list_tools() -> list[types.Tool]:
                 "properties": {
                     "user_id": {
                         "type": "string",
-                        "description": "User ID to fetch profile for"
+                        "description": "User ID to fetch profile for",
                     }
                 },
-                "required": ["user_id"]
+                "required": ["user_id"],
             },
         ),
         types.Tool(
@@ -74,15 +74,15 @@ async def handle_list_tools() -> list[types.Tool]:
                         "type": "string",
                         "description": "Type of metrics to display",
                         "enum": ["sales", "performance", "engagement"],
-                        "default": "sales"
+                        "default": "sales",
                     },
                     "limit": {
                         "type": "integer",
                         "description": "Number of rows to return",
-                        "default": 10
-                    }
+                        "default": 10,
+                    },
                 },
-                "required": []
+                "required": [],
             },
         ),
     ]
@@ -90,66 +90,57 @@ async def handle_list_tools() -> list[types.Tool]:
 
 @server.call_tool()
 async def handle_call_tool(
-    name: str, arguments: dict | None
-) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
+    name: str, arguments: Union[dict, None]
+) -> list[Union[types.TextContent, types.ImageContent, types.EmbeddedResource]]:
     """Handle tool calls and return dynamic HTML."""
-    
+
     if not arguments:
         arguments = {}
-    
+
     try:
         if name == "get_dynamic_dashboard":
             theme = arguments.get("theme", "light")
             data = await get_dashboard_data()
             html = render_dashboard(data, theme)
-            
             return [
                 types.TextContent(
                     type="text",
-                    text=f"Dynamic Dashboard (Theme: {theme})\n\n{html}"
+                    text=f"Dynamic Dashboard (Theme: {theme})\n\n{html}",
                 )
             ]
-        
+
         elif name == "get_user_profile":
             user_id = arguments.get("user_id")
             if not user_id:
                 raise ValueError("user_id is required")
-            
+
             user_data = await get_user_data(user_id)
             html = render_user_card(user_data)
-            
             return [
                 types.TextContent(
                     type="text",
-                    text=f"User Profile for {user_id}\n\n{html}"
+                    text=f"User Profile for {user_id}\n\n{html}",
                 )
             ]
-        
+
         elif name == "get_metrics_table":
             metric_type = arguments.get("metric_type", "sales")
-            limit = arguments.get("limit", 10)
-            
+            limit = int(arguments.get("limit", 10))  # ✅ ensure correct type
             metrics = await get_metrics_data(metric_type, limit)
             html = render_metrics_table(metrics, metric_type)
-            
             return [
                 types.TextContent(
                     type="text",
-                    text=f"Metrics Table ({metric_type.title()})\n\n{html}"
+                    text=f"Metrics Table ({metric_type.title()})\n\n{html}",
                 )
             ]
-        
+
         else:
             raise ValueError(f"Unknown tool: {name}")
-    
+
     except Exception as e:
         logger.error(f"Error handling tool call {name}: {str(e)}")
-        return [
-            types.TextContent(
-                type="text",
-                text=f"Error: {str(e)}"
-            )
-        ]
+        return [types.TextContent(type="text", text=f"Error: {str(e)}")]
 
 
 async def main():
